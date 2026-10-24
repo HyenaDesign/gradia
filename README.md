@@ -82,10 +82,12 @@ The `?debug` URL exposes deterministic pause/reset/advance helpers and field dia
 
 Repository: https://github.com/HyenaDesign/gradia
 
-In repository settings, choose **Pages → Build and deployment → Source: GitHub Actions** once. Pushes to `main` then run unit tests, build the site, check the production app in Chromium, and deploy only after checks pass. Pull requests run checks without deploying.
+In repository settings, choose **Pages → Build and deployment → Source: Deploy from a branch**, then select **gh-pages** and **/(root)** and save. The `main` branch contains source code; `gh-pages` contains only the compiled website. The custom Actions workflow is removed.
 
-The Vite base is relative, so bundled assets work under `/gradia/` and at a domain root. GitHub Pages serves only the built `dist/` artifact. Local QA captures, test exports, environment files, dependencies, and editor state are excluded from Git.
+The Vite base is relative, so bundled assets work under `/gradia/` and at a domain root. Build locally with `npm run build`; Vite copies `public/.nojekyll` into the output to skip Jekyll processing. Publish the **contents** of `dist/` at the root of `gh-pages`, without changing the source branch. Updates to `main` alone do not publish: rebuild, test, then update `gh-pages`. Local QA captures, test exports, environment files, dependencies, and editor state are excluded from Git.
+
+GitHub still uses its own Pages deployment workflow for branch publishing. This removes the custom build job, but does not guarantee that account-level Actions or billing restrictions will be bypassed. See [GitHub’s publishing-source documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
 For a local production check, run `npm run build` followed by `npm run test:production`. The test hosts the built files beneath `/gradia/`, including a real GPU render and PNG download. Set `FULL_QA=1` to also run all interaction, palette, material, duration, PNG, MP4, WebM, transparency, cancellation, and HD export suites against that production build. All suites accept an `APP_URL` override for a hosted release.
 
-Node 24 is used in CI. No environment variables, backend, account system, or paid API are required for hosting. Unsupported graphics configurations show a recovery message. Video format support is detected per browser. Physical iOS and Android devices still need hands-on testing before claiming universal mobile support.
+Node 24 is recommended for local builds. No environment variables, backend, account system, or paid API are required for hosting. Unsupported graphics configurations show a recovery message. Video format support is detected per browser. Physical iOS and Android devices still need hands-on testing before claiming universal mobile support.
