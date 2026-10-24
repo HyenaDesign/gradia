@@ -1,0 +1,73 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+(async()=>{
+ const browser=await chromium.launch({executablePath:process.env.CHROME_PATH,headless:true});
+ try {
+ const context=await browser.newContext({viewport:{width:1280,height:900}});
+ const page=await context.newPage(), errors=[],runtimeRequests=[];
+ page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await page.goto((process.env.APP_URL || 'http://127.0.0.1:5173/') + '?debug');await page.waitForFunction(()=>window.chromelt);
+ await page.evaluate(()=>window.chromelt.pause());
+ page.on('request',r=>runtimeRequests.push(r.url()));
+ const state=()=>page.evaluate(()=>window.chromelt.state);
+ const reset=async text=>page.evaluate(t=>window.chromelt.reset(t),text);
+ const advance=async seconds=>{for(let t=0;t<seconds-.001;t+=.1)await page.evaluate(s=>window.chromelt.advance(s),Math.min(.1,seconds-t));};
+ const preview=()=>page.locator('#paletteSwatches code').allTextContents();
+ assert.equal((await state()).mode,'semantic');
+ await page.keyboard.type('Xbox');assert.equal((await state()).palette.id,'xbox');
+ assert.deepEqual(await preview(),['#107C10','#FFFFFF','#000000']);
+ await page.screenshot({path:'qa/semantic-xbox-white.png'});
+ await reset('Xbox');await advance(1.4);await page.screenshot({path:'qa/semantic-xbox-letters.png'});
+ await advance(5.1);await page.screenshot({path:'qa/semantic-xbox-completed.png'});
+ assert((await page.evaluate(()=>window.chromelt.measureDensity()))>.995);
+ await page.mouse.move(500,450);await page.mouse.down();
+ for(let i=0;i<15;i++){await page.mouse.move(500+i*20,450+Math.sin(i/14*Math.PI)*100);await advance(.05);}
+ await page.mouse.up();await page.screenshot({path:'qa/semantic-xbox-dragged.png'});
+ for(const spelling of ['Red Bull','RedBull','red-bull']){await reset(spelling);assert.equal((await state()).palette.id,'red-bull');}
+ await reset('Ocean');assert.equal((await state()).palette.type,'semantic');
+ assert.deepEqual(await preview(),['#073B70','#16A8B6','#B1E7D4']);
+ await advance(6.5);await page.screenshot({path:'qa/semantic-ocean.png'});
+ await reset('zqv');assert.equal((await state()).palette.type,'character');
+ assert.match(await page.locator('#paletteName').textContent(),/fallback/);
+ await reset('Xbox');await page.locator('[data-mode="character"]').click();
+ assert.equal((await state()).palette.type,'character');assert.equal((await state()).progress,0);
+ await reset('Ocean');assert.equal((await state()).mode,'character');assert.equal((await state()).palette.type,'character');
+ await page.locator('[data-mode="custom"]').click();
+ const textBefore=(await state()).text;
+ await page.getByLabel('Color 1 HEX',{exact:true}).fill('#FF3344');
+ await page.getByLabel('Color 2 HEX',{exact:true}).fill('#123456');
+ await page.getByLabel('Color 3 HEX',{exact:true}).fill('#FFFFFF');
+ assert.equal((await state()).text,textBefore,'Palette typing must not edit the artwork');
+ assert.deepEqual(await preview(),['#FF3344','#123456','#FFFFFF']);
+ await page.getByLabel('Color 1 HEX',{exact:true}).fill('nothex');
+ assert.deepEqual(await preview(),['#FF3344','#123456','#FFFFFF']);
+ assert.equal(await page.getByLabel('Color 1 HEX',{exact:true}).getAttribute('aria-invalid'),'true');
+ await page.getByLabel('Color 1 HEX',{exact:true}).blur();
+ await reset('A');await advance(1.4);await page.screenshot({path:'qa/semantic-custom-letter.png'});
+ await advance(5.1);await page.screenshot({path:'qa/semantic-custom.png'});
+ assert((await page.evaluate(()=>window.chromelt.measureDensity()))>.995);
+ await page.getByRole('button',{name:'Remove color 3',exact:true}).click();
+ await page.getByRole('button',{name:'Remove color 2',exact:true}).click();
+ assert(await page.getByRole('button',{name:'Remove color 1',exact:true}).isDisabled());
+ await page.getByRole('button',{name:'+ Add color',exact:true}).click();
+ const saved=await preview();
+ await page.reload();await page.waitForFunction(()=>window.chromelt);await page.evaluate(()=>window.chromelt.pause());
+ assert.equal((await state()).mode,'custom');assert.deepEqual(await preview(),saved);
+ // No fetch or other network resource is needed by recognition or color editing.
+ runtimeRequests.length=0;
+ await context.setOffline(true);
+ await page.locator('[data-mode="semantic"]').click();
+ for(const text of ['Nalu','Xbox','Red Bull','Ocean','unknown'])await reset(text);
+ assert.equal(runtimeRequests.length,0);
+ await context.setOffline(false);
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);
+ await reset('Red Bull');await advance(1.5);await page.screenshot({path:'qa/semantic-mobile.png'});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
+ await page.locator('[data-mode="custom"]').click();
+ await page.getByRole('button',{name:'+ Add color',exact:true}).click();
+ await page.screenshot({path:'qa/semantic-mobile-custom.png'});
+ assert.deepEqual(errors,[]);
+ console.log('PASS: brand/alias/semantic/fallback recognition, three modes, custom validation and editing, persistence, offline resolution, mobile layout, dye coverage, pointer rendering.');
+ } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

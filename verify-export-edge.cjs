@@ -1,0 +1,20 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const fs=require('fs'),assert=require('node:assert/strict');
+(async()=>{const browser=await chromium.launch({executablePath:process.env.CHROME_PATH,headless:true});try{
+ const p=await browser.newPage({viewport:{width:1280,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ await p.goto((process.env.APP_URL || 'http://127.0.0.1:5173/') + '?debug');await p.waitForFunction(()=>window.chromelt);
+ await p.evaluate(()=>chromelt.reset('Ocean'));await p.locator('[data-personality="chrome"]').click();
+ await p.evaluate(()=>chromelt.advance(7.5));const before=await p.evaluate(()=>({hash:chromelt.fingerprint(),elapsed:chromelt.state.elapsed}));
+ await p.locator('#exportToggle').click();await p.locator('#exportFormat').selectOption('mp4');await p.locator('#exportSize').selectOption('1920');
+ const pending=p.waitForEvent('download',{timeout:180000});await p.locator('#exportStart').click();const file=await pending;await file.saveAs('qa/export-chrome-hd.mp4');await p.waitForFunction(()=>!document.body.classList.contains('exporting'));
+ assert.deepEqual(await p.evaluate(()=>({hash:chromelt.fingerprint(),elapsed:chromelt.state.elapsed})),before);
+ const buffer=fs.readFileSync('qa/export-chrome-hd.mp4');assert(buffer.length>10000);await p.route('**/__hd',r=>r.fulfill({contentType:'video/mp4',body:buffer}));
+ const metadata=await p.evaluate(async()=>{const v=document.createElement('video');v.src=URL.createObjectURL(await(await fetch('/__hd')).blob());await new Promise((r,j)=>{v.onloadedmetadata=r;v.onerror=j;});const result={width:v.videoWidth,height:v.videoHeight,duration:v.duration};URL.revokeObjectURL(v.src);return result;});
+ assert.equal(metadata.width,1920);assert(metadata.duration>5.8&&metadata.duration<6.5);
+ await p.locator('#exportStart').click();await p.waitForFunction(()=>document.querySelector('#exportStatus').textContent.includes('Encoding'),{},{timeout:120000});await p.locator('#exportCancel').click();await p.waitForFunction(()=>!document.body.classList.contains('exporting'));assert.deepEqual(await p.evaluate(()=>({hash:chromelt.fingerprint(),elapsed:chromelt.state.elapsed})),before);
+ await p.setViewportSize({width:390,height:844});await p.waitForFunction(()=>document.querySelector('#exportHint').textContent.startsWith('872 × 1920'));await p.screenshot({path:'qa/export-mobile-final.png'});
+ await p.keyboard.press('Escape');assert(await p.locator('#exportPanel').isHidden());assert.equal(await p.evaluate(()=>chromelt.state.text),'Ocean');
+ await p.locator('#pauseButton').click();await p.evaluate(()=>chromelt.resume());const t=await p.evaluate(()=>chromelt.state.elapsed);await p.waitForTimeout(150);assert.equal(await p.evaluate(()=>chromelt.state.elapsed),t);await p.locator('#pauseButton').click();await p.waitForTimeout(150);assert((await p.evaluate(()=>chromelt.state.elapsed))>t);
+ const unsupported=await browser.newPage();await unsupported.addInitScript(()=>{window.MediaRecorder=undefined;});await unsupported.goto((process.env.APP_URL || 'http://127.0.0.1:5173/') + '?debug');await unsupported.waitForFunction(()=>window.chromelt);assert(await unsupported.locator('option[value="mp4"]').isDisabled());assert(await unsupported.locator('option[value="webm"]').isDisabled());assert(!(await unsupported.locator('option[value="sequence"]').isDisabled()));
+ assert.deepEqual(errors,[]);console.log('PASS: HD MP4, cancellation while encoding, mobile dimensions, Escape, pause/resume, unsupported codec fallback.',metadata);
+ fs.writeFileSync('qa/export-edge-report.json',JSON.stringify({metadata,errors},null,2));
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

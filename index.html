@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Gradia — Type. Melt. Create.</title>
+  <meta name="description" content="Turn words into living fluid gradients. Explore five materials, semantic color palettes, and high-resolution image and video exports. Free, private, and rendered in your browser." />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main>
+    <div id="canvas-container"></div>
+    <section id="startupStatus" class="startup-status" role="alert" hidden><h2>Let’s get the canvas running.</h2><p></p><button type="button">Reload canvas</button></section>
+    <noscript><div class="startup-status"><h2>Enable JavaScript to use Gradia.</h2><p>The fluid simulation runs locally in your browser.</p></div></noscript>
+    <header class="toolbar">
+      <h1><img class="brand-logo" src="/logo.svg" alt="" aria-hidden="true" />Gradia<span aria-hidden="true">.</span></h1>
+      <div class="toolbar-actions">
+      <button id="exportToggle" class="export-toggle" aria-expanded="false" aria-controls="exportPanel">Export <span aria-hidden="true">↗</span></button>
+      <button id="pauseButton" class="icon-button" aria-label="Pause animation" title="Pause animation" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg></button>
+      <button id="meltButton" class="icon-button" aria-label="Melt again" title="Melt again · Enter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 10a7.5 7.5 0 1 1 .8 6.2"/><path d="M4.5 4.5V10H10"/></svg>
+      </button>
+      </div>
+    </header>
+    <aside id="palettePanel" class="palette-panel" aria-label="Color settings"></aside>
+    <section class="personality-panel" aria-label="Fluid personality">
+      <div id="personalityChoices" class="personality-choices" role="group" aria-label="Choose a material"></div>
+      <p id="personalityDescription"></p>
+    </section>
+    <aside id="exportPanel" class="export-panel" aria-label="Export artwork" hidden></aside>
+    <button id="typePrompt" class="type-prompt" aria-controls="keyboardInput">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10h.01M10.3 10h.01M13.7 10h.01M17 10h.01M7 13h.01M17 13h.01M10 14h4"/></svg>
+      <span>Type something. <span class="prompt-secondary">Watch it melt.</span></span>
+    </button>
+    <!-- Native keyboard/IME bridge; the artwork is the only visible text surface. -->
+    <textarea id="keyboardInput" class="keyboard-capture" tabindex="-1" rows="1"
+      aria-label="Text to melt" aria-describedby="typingHelp" autocomplete="off"
+      autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done"></textarea>
+    <p id="typingHelp" class="sr-only">Type up to twelve characters. Pause to melt. Enter replays; Escape clears. Tap the prompt to open your keyboard.</p>
+    <output id="textStatus" class="sr-only" aria-live="polite"></output>
+  </main>
+  <script type="module" src="/bootstrap.js"></script>
+</body>
+</html>

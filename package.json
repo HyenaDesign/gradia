@@ -1,0 +1,28 @@
+{
+  "name": "gradia",
+  "version": "1.0.0",
+  "description": "Interactive fluid typography with semantic color palettes, five materials, and local image and video export.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/colors.test.mjs",
+    "test:production": "node verify-production.cjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1",
+    "sharp": "0.35.5",
+    "vite": "^8.3.5"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
